@@ -1,2 +1,11 @@
 fastapi==0.112.2
 uvicorn==0.30.5
+sqlalchemy
+psycopg2-binary
+pydantic
+python-dotenv
+asyncpg
+alembic
+python-jose
+passlib[bcrypt]
+python-multipart
