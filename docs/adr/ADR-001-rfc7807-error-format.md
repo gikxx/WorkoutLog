@@ -37,9 +37,9 @@ Workout Log API (FastAPI + SQLAlchemy) возвращает ошибки в ра
 
 ## Rollout Plan
 ### Definition of Done
-- [ ] Реализован глобальный exception handler в FastAPI
-- [ ] Все эндпоинты (/workouts, /exercises, /stats) возвращают RFC 7807 ошибки
-- [ ] Добавлены тесты для проверки формата ошибок
+- [x] Реализован глобальный exception handler в FastAPI
+- [x] Все эндпоинты (/workouts, /exercises, /stats) возвращают RFC 7807 ошибки
+- [x] Добавлены тесты для проверки формата ошибок
 - [ ] correlation_id включен в логи приложения
 - [ ] Документация обновлена с примерами ошибок
 
