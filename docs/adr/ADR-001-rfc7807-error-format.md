@@ -56,3 +56,5 @@ Workout Log API (FastAPI + SQLAlchemy) возвращает ошибки в ра
 - NFR-08 (безопасные ошибки)
 - R8 (небезопасные ошибки API)
 - tests/test_error_handling.py::test_rfc7807_format
+- app/core/errors.py - реализация problem()
+- app/core/exception_handlers.py - обработчики ошибок
