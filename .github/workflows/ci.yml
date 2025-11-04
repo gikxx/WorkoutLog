@@ -31,8 +31,21 @@ jobs:
           black --check .
           isort --check-only .
 
-      - name: Tests
-        run: pytest -q
+      - name: Tests with coverage
+        run: |
+          pytest --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Check coverage quality gate
+        run: |
+          python -c "
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('coverage.xml')
+          root = tree.getroot()
+          coverage = float(root.get('line-rate')) * 100
+          print(f'Coverage: {coverage:.2f}%')
+          assert coverage >= 80, f'Coverage {coverage:.2f}% < 80% - Quality gate failed'
+          print('Quality gate passed: coverage ≥ 80%')
+          "
 
       - name: Pre-commit (all files)
         run: pre-commit run --all-files
