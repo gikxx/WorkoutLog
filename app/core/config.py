@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256")
 
     database_url: str = Field(
+        default="postgresql+psycopg2://test:test@localhost/test",
         pattern=r"^postgresql\+psycopg2://.+$",
         description="PostgreSQL database URL",
     )
