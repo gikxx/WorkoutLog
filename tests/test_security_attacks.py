@@ -104,15 +104,28 @@ def test_mass_assignment_prevention(MockWorkoutService):
     assert "admin" not in created
 
 
-def test_json_injection_prevention():
+@patch("app.api.endpoints.workouts.get_db", mock_get_db)
+@patch("app.api.endpoints.workouts.WorkoutService")
+def test_json_injection_prevention(MockWorkoutService):
     def mock_user():
         return 1
 
+    mock_service = MagicMock()
+    mock_service.create_workout.return_value = {
+        "id": 1,
+        "note": "test",
+        "owner_id": 1,
+        "date": "2024-01-01",
+    }
+    MockWorkoutService.return_value = mock_service
+
     app.dependency_overrides[get_current_user] = mock_user
+
     malicious_json = '{"note": "test", "__class__": "malicious"}'
     response = client.post(
         "/workouts/", data=malicious_json, headers={"Content-Type": "application/json"}
     )
+
     app.dependency_overrides = {}
     assert response.status_code in [200, 422, 401]
 
