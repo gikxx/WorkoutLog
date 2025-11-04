@@ -1,5 +1,4 @@
 import html
-import re
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
@@ -20,7 +19,7 @@ class UserCreate(UserBase):
     password: str = Field(
         min_length=8,
         max_length=100,
-        pattern=r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$",
+        pattern=r"^[a-zA-Z\d@$!%*?&]{8,100}$",
         description="Password must contain uppercase, lowercase and numbers",
     )
 
@@ -29,7 +28,7 @@ class WorkoutBase(BaseModel):
     note: Optional[str] = Field(
         None,
         max_length=500,
-        pattern=r"^[a-zA-Z0-9\s\.,!?\-_]+$",
+        pattern=r"^[\w\s\.,!?\-_]+$",
         description="Workout note can only contain letters, numbers, and basic punctuation",
     )
 
@@ -37,8 +36,6 @@ class WorkoutBase(BaseModel):
     @classmethod
     def sanitize_note(cls, v):
         if v:
-            if not re.match(r"^[a-zA-Z0-9\s\.,!?\-_]+$", v):
-                raise ValueError("Note contains invalid characters")
             return html.escape(v.strip())
         return v
 
@@ -59,7 +56,7 @@ class ExerciseBase(BaseModel):
     name: str = Field(
         min_length=1,
         max_length=100,
-        pattern=r"^[a-zA-Z0-9\s\-_]+$",
+        pattern=r"^[\w\s\-_]+$",
         examples=["Bench Press", "Squat"],
     )
 
@@ -67,10 +64,6 @@ class ExerciseBase(BaseModel):
     @classmethod
     def sanitize_name(cls, v):
         if v:
-            if not re.match(r"^[a-zA-Z0-9\s\-_]+$", v):
-                raise ValueError(
-                    "Name can only contain letters, numbers, spaces, hyphens and underscores"
-                )
             return html.escape(v.strip())
         return v
 

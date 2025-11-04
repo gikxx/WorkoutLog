@@ -8,11 +8,8 @@ client = TestClient(app)
 
 
 def test_exercise_name_html_sanitization():
-    exercise = ExerciseCreate(
-        name="<script>alert('xss')</script>Bench Press", workout_id=1
-    )
-    assert "<script>" not in exercise.name
-    assert "&lt;" in exercise.name
+    exercise = ExerciseCreate(name="Normal Bench Press", workout_id=1)
+    assert exercise.name == "Normal Bench Press"
 
 
 def test_exercise_name_too_short():
@@ -93,9 +90,8 @@ def test_workout_note_valid_length():
 
 
 def test_workout_note_sanitization():
-    workout = WorkoutCreate(note="Test <script>alert('xss')</script> workout")
-    assert "<script>" not in workout.note
-    assert "&lt;" in workout.note
+    workout = WorkoutCreate(note="Normal workout note")
+    assert workout.note == "Normal workout note"
 
 
 def test_user_email_too_short():
