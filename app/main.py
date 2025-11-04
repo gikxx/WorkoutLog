@@ -9,6 +9,7 @@ app = FastAPI(title="Workout Log API")
 
 app.add_exception_handler(StarletteHTTPException, handlers.http_exception_handler)
 app.add_exception_handler(RequestValidationError, handlers.validation_exception_handler)
+app.add_exception_handler(Exception, handlers.generic_exception_handler)
 
 app.include_router(workouts.router, prefix="/workouts", tags=["workouts"])
 app.include_router(exercises.router, prefix="/exercises", tags=["exercises"])
