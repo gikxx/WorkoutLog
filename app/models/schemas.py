@@ -1,9 +1,10 @@
 import html
 import re
+from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class UserBase(BaseModel):
@@ -42,6 +43,18 @@ class WorkoutBase(BaseModel):
         return v
 
 
+class WorkoutCreate(WorkoutBase):
+    pass
+
+
+class WorkoutResponse(WorkoutBase):
+    id: int
+    date: datetime
+    owner_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ExerciseBase(BaseModel):
     name: str = Field(
         min_length=1,
@@ -62,6 +75,17 @@ class ExerciseBase(BaseModel):
         return v
 
 
+class ExerciseCreate(ExerciseBase):
+    workout_id: int = Field(gt=0, description="Workout ID must be positive integer")
+
+
+class ExerciseResponse(ExerciseBase):
+    id: int
+    workout_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class SetBase(BaseModel):
     reps: int = Field(gt=0, le=100, description="Reps must be between 1 and 100")
     weight: Decimal = Field(
@@ -74,3 +98,14 @@ class SetBase(BaseModel):
         if v is not None:
             return round(v, 2)
         return v
+
+
+class SetCreate(SetBase):
+    exercise_id: int = Field(gt=0, description="Exercise ID must be positive integer")
+
+
+class SetResponse(SetBase):
+    id: int
+    exercise_id: int
+
+    model_config = ConfigDict(from_attributes=True)
