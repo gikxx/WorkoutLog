@@ -7,10 +7,10 @@ class StatsService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_stats(self):
-        total_workouts = get_workouts_count(self.db)
-        total_exercises = get_exercises_count(self.db)
-        last_workout = get_last_workout(self.db)
+    def get_stats(self, owner_id: int):
+        total_workouts = get_workouts_count(self.db, owner_id)
+        total_exercises = get_exercises_count(self.db, owner_id)
+        last_workout = get_last_workout(self.db, owner_id)
 
         last_workout_date = "No workouts yet"
         recent_notes = None
