@@ -22,3 +22,8 @@ app.include_router(stats.router, prefix="/stats", tags=["stats"])
 @app.get("/")
 def root():
     return {"message": "Workout Log API is running"}
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "Workout Log API"}
