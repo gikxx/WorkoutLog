@@ -106,11 +106,26 @@ jobs:
       - name: Build and test container security
         run: |
           set -e
-
-          # Сборка и запуск
           docker compose build app
           docker compose up -d app
           sleep 20
+
+          # ДОБАВЛЯЕМ ПРОСМОТР ЛОГОВ
+          echo "=== Container logs ==="
+          docker compose logs app || true
+
+          echo "=== Container status ==="
+          docker compose ps
+
+          # Если контейнер не запустился, ждем еще и проверяем снова
+          if ! docker compose exec -T app id -u 2>/dev/null | grep -q '1001'; then
+            echo "Container not ready, waiting 30 more seconds..."
+            sleep 30
+            echo "=== Container logs after wait ==="
+            docker compose logs app
+            echo "=== Final container status ==="
+            docker compose ps
+          fi
 
           # Проверки (выходят при первой же ошибке)
           docker compose exec -T app id -u | grep -q '1001'
