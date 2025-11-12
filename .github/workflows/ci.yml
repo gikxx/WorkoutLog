@@ -61,7 +61,8 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
-          failure-threshold: warning
+          failure-threshold: error
+          configuration: hadolint.yaml
 
       - name: Build Docker image
         run: docker build -t workout-app:latest .
