@@ -8,6 +8,7 @@ COPY requirements.txt ./
 # Устанавливаем зависимости в wheels
 RUN --mount=type=cache,target=/root/.cache \
     pip install --upgrade pip && \
+    pip install --no-cache-dir wheel && \
     pip wheel --wheel-dir=/wheels --no-cache-dir -r requirements.txt
 
 # Финальный образ
@@ -21,13 +22,13 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Создаем non-root пользователя с фиксированным UID (лучше для ★★2)
+# Создаем non-root пользователя с фиксированным UID
 RUN groupadd -r -g 1001 appuser && \
     useradd -r -u 1001 -g appuser -d /app -s /bin/bash appuser
 
 # Устанавливаем curl ДО смены пользователя
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
+    apt-get install -y --no-install-recommends curl=7.88.* && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -49,7 +50,7 @@ RUN chmod -R go-w /app && \
 
 USER appuser
 
-# Healthcheck для FastAPI (теперь curl доступен)
+# Healthcheck для FastAPI
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
