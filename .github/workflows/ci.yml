@@ -97,6 +97,12 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y jq curl
 
+      - name: Create .env from example
+        run: |
+          cp .env.example .env
+          sed -i 's/your-super-secret-key-change-in-production/ci-test-key-12345678901234567890123456789012/' .env
+          sed -i 's|sqlite:///./workout.db|sqlite:///./test.db|' .env
+
       - name: Build and test container security
         run: |
           set -e
