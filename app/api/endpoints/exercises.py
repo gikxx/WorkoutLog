@@ -1,31 +1,28 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_current_user
+from app.core.database import get_db
 from app.models.schemas import ExerciseCreate, ExerciseResponse
+from app.services.exercise_service import ExerciseService
 
 router = APIRouter()
 
-exercises_db = [
-    {"id": 1, "name": "Жим штанги лежа", "workout_id": 1},
-    {"id": 2, "name": "Тяга верхнего блока", "workout_id": 1},
-    {"id": 3, "name": "Бег на дорожке", "workout_id": 2},
-    {"id": 4, "name": "Приседания со штангой", "workout_id": 3},
-]
-exercise_id = 5
-
 
 @router.post("/", response_model=ExerciseResponse)
-def create_exercise(exercise: ExerciseCreate):
-    global exercise_id
-    exercise_data = {
-        "id": exercise_id,
-        "name": exercise.name,
-        "workout_id": exercise.workout_id,
-    }
-    exercises_db.append(exercise_data)
-    exercise_id += 1
-    return exercise_data
+def create_exercise(
+    exercise: ExerciseCreate,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user),
+):
+    service = ExerciseService(db)
+    db_exercise = service.create_exercise(exercise, current_user_id)
+    return db_exercise
 
 
 @router.get("/", response_model=list[ExerciseResponse])
-def get_exercises():
-    return exercises_db
+def get_exercises(
+    db: Session = Depends(get_db), current_user_id: int = Depends(get_current_user)
+):
+    service = ExerciseService(db)
+    return service.get_exercises(current_user_id)
