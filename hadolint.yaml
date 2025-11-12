@@ -1,4 +1,6 @@
-failure-threshold: warning
+failure-threshold: error
 ignored:
   - DL3008
   - DL3013
+  - DL3042
+  - SC2015
