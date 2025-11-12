@@ -1,8 +1,58 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
     ports:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-    profiles: ["dev"]
+      - PYTHONDONTWRITEBYTECODE=1
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+      - /var/tmp:rw,noexec,nosuid,size=64m
+    user: "1001:1001"
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
+    profiles: ["dev", "production"]
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=workout_db
+      - POSTGRES_USER=appuser
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d workout_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles: ["full", "production"]
+
+volumes:
+  postgres_data:
