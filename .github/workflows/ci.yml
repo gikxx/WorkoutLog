@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -118,3 +118,17 @@ jobs:
         with:
           name: security-reports
           path: trivy-results.sarif
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [ test, security ]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy to Render
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          echo "🚀 Triggering deployment to Render..."
+          curl -X POST "$RENDER_DEPLOY_HOOK"
+          echo "✅ Deployment triggered successfully!"
