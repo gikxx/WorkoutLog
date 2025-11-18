@@ -53,19 +53,11 @@ jobs:
 
       - name: Run tests with environment variables
         env:
-          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          database_url: ${{ secrets.TEST_DATABASE_URL }}
+          jwt_secret: ${{ secrets.JWT_SECRET }}
         run: |
           mkdir -p reports
           pytest --cov=app --cov-report=xml --cov-report=html --junitxml=reports/junit.xml -q
-
-      - name: Test secrets masking
-        env:
-          MOCK_SECRET: ${{ secrets.MOCK_SECRET }}
-        run: |
-          echo "Testing secret masking..."
-          echo "Secret value length: ${#MOCK_SECRET}"
 
       - name: Check coverage quality gate
         run: |
