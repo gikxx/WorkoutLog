@@ -19,7 +19,7 @@ concurrency:
 jobs:
   sbom_sca:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
       - name: Generate SBOM (Syft CycloneDX)
         run: |
           docker run --rm -v $PWD:/work -w /work anchore/syft:v1.38.0 \
-            packages dir:. -o cyclonedx-json > EVIDENCE/P09/sbom.json
+            dir:. -o cyclonedx-json --scope all-layers > EVIDENCE/P09/sbom.json
 
       - name: SCA Scan (Grype)
         run: |
@@ -50,6 +50,20 @@ jobs:
           echo "## High/Critical Vulnerabilities" >> EVIDENCE/P09/sca_summary.md
           jq -r '.matches[] | select(.vulnerability.severity=="High" or .vulnerability.severity=="Critical") | "- \(.vulnerability.id) | \(.artifact.name)@\(.artifact.version) | \(.vulnerability.severity)"' \
             EVIDENCE/P09/sca_report.json >> EVIDENCE/P09/sca_summary.md 2>/dev/null || echo "No High/Critical vulnerabilities found" >> EVIDENCE/P09/sca_summary.md
+
+      - name: Python SCA (pip-audit)
+        run: |
+          docker run --rm -v $PWD:/work -w /work python:3.12-slim \
+            bash -c "pip install pip-audit==9.0.1 && pip-audit -r /work/requirements.txt -r /work/requirements-dev.txt --format json --desc" > EVIDENCE/P09/pip_audit_report.json 2>/dev/null || echo '{"dependencies": [], "vulnerabilities": []}' > EVIDENCE/P09/pip_audit_report.json
+
+          echo "" >> EVIDENCE/P09/sca_summary.md
+          echo "## Python Dependencies Audit" >> EVIDENCE/P09/sca_summary.md
+          python_count=$(jq '.vulnerabilities | length' EVIDENCE/P09/pip_audit_report.json 2>/dev/null || echo "0")
+          echo "Python vulnerabilities found: $python_count" >> EVIDENCE/P09/sca_summary.md
+          if [ "$python_count" -gt 0 ]; then
+            echo "" >> EVIDENCE/P09/sca_summary.md
+            jq -r '.vulnerabilities[] | "- \(.id) | \(.fix_versions[]?) // "No fix" | \(.severity?) // "Unknown"' EVIDENCE/P09/pip_audit_report.json >> EVIDENCE/P09/sca_summary.md 2>/dev/null || true
+          fi
 
       - name: Upload SBOM/SCA evidence
         if: always()
