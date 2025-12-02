@@ -1,0 +1,93 @@
+name: Security - SBOM & SCA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "**/*.py"
+      - "requirements*.txt"
+      - "pyproject.toml"
+      - ".github/workflows/ci-sbom-sca.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sbom_sca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure evidence dirs
+        run: mkdir -p EVIDENCE/P09
+
+      - name: Generate SBOM (Syft CycloneDX)
+        run: |
+          docker run --rm -v $PWD:/work -w /work anchore/syft:v1.38.0 \
+            dir:. -o cyclonedx-json --scope all-layers \
+            --catalogers python,python-package-cataloger > EVIDENCE/P09/sbom.json
+
+      - name: SCA Scan (Grype)
+        run: |
+          set -e
+          docker run --rm -v $PWD:/work -w /work anchore/grype:v0.104.1 \
+            sbom:/work/EVIDENCE/P09/sbom.json -o json > EVIDENCE/P09/sca_report.json
+          echo "# SCA summary" > EVIDENCE/P09/sca_summary.md
+          echo "Generated at: $(date -u)" >> EVIDENCE/P09/sca_summary.md
+          echo "" >> EVIDENCE/P09/sca_summary.md
+          echo "## Vulnerability Count by Severity" >> EVIDENCE/P09/sca_summary.md
+          echo '```json' >> EVIDENCE/P09/sca_summary.md
+          jq '[.matches[].vulnerability.severity] | group_by(.) | map({(.[0]): length}) | add // {}' \
+            EVIDENCE/P09/sca_report.json >> EVIDENCE/P09/sca_summary.md || echo "{}" >> EVIDENCE/P09/sca_summary.md
+          echo '```' >> EVIDENCE/P09/sca_summary.md
+
+          echo "" >> EVIDENCE/P09/sca_summary.md
+          echo "## High/Critical Vulnerabilities" >> EVIDENCE/P09/sca_summary.md
+          jq -r '.matches[] | select(.vulnerability.severity=="High" or .vulnerability.severity=="Critical") | "- \(.vulnerability.id) | \(.artifact.name)@\(.artifact.version) | \(.vulnerability.severity)"' \
+            EVIDENCE/P09/sca_report.json >> EVIDENCE/P09/sca_summary.md 2>/dev/null || echo "No High/Critical vulnerabilities found" >> EVIDENCE/P09/sca_summary.md
+
+      - name: Python SCA (pip-audit)
+        run: |
+          docker run --rm -v $PWD:/work -w /work python:3.12-slim \
+            bash -c "pip install pip-audit==9.0.1 && pip-audit -r /work/requirements.txt -r /work/requirements-dev.txt --format json --desc" > EVIDENCE/P09/pip_audit_report.json 2>/dev/null || echo '{"dependencies": [], "vulnerabilities": []}' > EVIDENCE/P09/pip_audit_report.json
+
+          echo "" >> EVIDENCE/P09/sca_summary.md
+          echo "## Python Dependencies Audit" >> EVIDENCE/P09/sca_summary.md
+          python_count=$(jq '.vulnerabilities | length' EVIDENCE/P09/pip_audit_report.json 2>/dev/null || echo "0")
+          echo "Python vulnerabilities found: $python_count" >> EVIDENCE/P09/sca_summary.md
+          if [ "$python_count" -gt 0 ]; then
+            echo "" >> EVIDENCE/P09/sca_summary.md
+            jq -r '.vulnerabilities[] | "- \(.id) | \(.fix_versions[]?) // "No fix" | \(.severity?) // "Unknown"' EVIDENCE/P09/pip_audit_report.json >> EVIDENCE/P09/sca_summary.md 2>/dev/null || true
+          fi
+
+      - name: Check Critical/High vulnerabilities (policy compliance)
+        run: |
+          # Проверяем по политике: Critical/High должны быть зафиксированы или иметь waiver
+          if [ -f EVIDENCE/P09/sca_report.json ]; then
+            high_critical_count=$(jq '[.matches[].vulnerability.severity] | map(select(.=="High" or .=="Critical")) | length' EVIDENCE/P09/sca_report.json 2>/dev/null || echo "0")
+            echo "High/Critical vulnerabilities found: $high_critical_count"
+
+            if [ "$high_critical_count" -gt 0 ]; then
+              echo "Found $high_critical_count High/Critical vulnerabilities"
+              echo "According to policy (project/69_sbom-vuln-mgmt.md):"
+              echo "- Critical/High require fix or waiver with justification (≤ 7 days)"
+              echo "Please check policy/waivers.yml or update dependencies"
+              exit 1
+            else
+              echo "No High/Critical vulnerabilities found"
+            fi
+          fi
+
+      - name: Upload SBOM/SCA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P09_EVIDENCE
+          path: EVIDENCE/P09
+          retention-days: 30

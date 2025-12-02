@@ -1,0 +1,34 @@
+# См. project/69_sbom-vuln-mgmt.md для описания политики.
+
+# Политика уровней:
+# - Critical/High - обязателен фикс или waiver с обоснованием (срок: ≤ 7 дней)
+# - Medium - план фикса (≤ 14 дней)
+# - Low/Info - по усмотрению
+
+waivers:
+  - id: "CVE-2024-47874"
+    package: "starlette"
+    version: "0.38.6"
+    severity: "HIGH"
+    reason: "Транзитивная зависимость FastAPI. Обновление требует миграции на fastapi>=0.113.0. Уязвимость в multipart/form-data, наш API работает только с JSON."
+    issue: "https://github.com/gikxx/WorkoutLog/security/code-scanning/2"
+    expires_at: "2025-12-09"
+    approved_by: "gikxx"
+
+  - id: "CVE-2025-54121"
+    package: "starlette"
+    version: "0.38.6"
+    severity: "MEDIUM"
+    reason: "Denial-of-service через большие файлы. Наш сервис не принимает загрузку файлов, только JSON API."
+    issue: "https://github.com/gikxx/WorkoutLog/security/code-scanning/3"
+    expires_at: "2025-12-16"
+    approved_by: "gikxx"
+
+  - id: "CVE-2025-8869"
+    package: "pip"
+    version: "24.0"
+    severity: "MEDIUM"
+    reason: "Уязвимость в системном pip (среда сборки). Не влияет на runtime безопасность приложения."
+    issue: "https://github.com/gikxx/WorkoutLog/security/code-scanning/1"
+    expires_at: "2025-12-16"
+    approved_by: "gikxx"
