@@ -31,7 +31,7 @@ jobs:
         run: |
           docker run --rm -v $PWD:/work -w /work anchore/syft:v1.38.0 \
             dir:. -o cyclonedx-json --scope all-layers \
-            --catalogers python,github-action,python-package-cataloger > EVIDENCE/P09/sbom.json
+            --catalogers python,python-package-cataloger > EVIDENCE/P09/sbom.json
 
       - name: SCA Scan (Grype)
         run: |
