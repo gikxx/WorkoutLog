@@ -29,13 +29,13 @@ jobs:
 
       - name: Generate SBOM (Syft CycloneDX)
         run: |
-          docker run --rm -v $PWD:/work -w /work anchore/syft:latest \
+          docker run --rm -v $PWD:/work -w /work anchore/syft:v1.0.2 \
             packages dir:. -o cyclonedx-json > EVIDENCE/P09/sbom.json
 
       - name: SCA Scan (Grype)
         run: |
           set -e
-          docker run --rm -v $PWD:/work -w /work anchore/grype:v1.0.2 \
+          docker run --rm -v $PWD:/work -w /work anchore/grype:v0.104.1 \
             sbom:/work/EVIDENCE/P09/sbom.json -o json > EVIDENCE/P09/sca_report.json
           echo "# SCA summary" > EVIDENCE/P09/sca_summary.md
           echo "Generated at: $(date -u)" >> EVIDENCE/P09/sca_summary.md
