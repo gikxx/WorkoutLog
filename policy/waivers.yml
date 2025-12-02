@@ -1,0 +1,3 @@
+# policy/waivers.yml — шаблон файла исключений для SBOM & SCA
+
+waivers: []
