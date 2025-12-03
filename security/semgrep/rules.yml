@@ -1,0 +1,43 @@
+rules:
+  # Пример кастомного правила для Python проекта
+  - id: python-hardcoded-secret
+    patterns:
+      - pattern: |
+          $SECRET = "..."
+      - pattern: |
+          $SECRET = '...'
+      - pattern: |
+          os.environ.get("...")
+    message: "Потенциально хардкодженный секрет или ключ API"
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      confidence: MEDIUM
+
+  - id: python-unsafe-deserialization
+    patterns:
+      - pattern: |
+          pickle.loads($DATA)
+      - pattern: |
+          yaml.load($DATA, ...)
+    message: "Потенциально опасная десериализация данных"
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+
+  - id: python-sql-injection-risk
+    patterns:
+      - pattern: |
+          execute(f"...{$INPUT}...")
+      - pattern: |
+          execute("...{$INPUT}...")
+    message: "Риск SQL инъекции при использовании f-строк в запросах"
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"

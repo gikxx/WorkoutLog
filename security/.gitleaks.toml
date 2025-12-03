@@ -1,0 +1,41 @@
+title = "Course Project Gitleaks Configuration"
+version = "8.18.2"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowed patterns and paths"
+paths = [
+  # Игнорируем директории с отчётами
+  "EVIDENCE",
+  "tests",
+  "docs",
+
+  # Файлы конфигурации
+  "security/.gitleaks.toml",
+  "security/semgrep/rules.yml",
+
+  # Документация
+  "README.md",
+  "CONTRIBUTING.md",
+  "CHANGELOG.md",
+]
+
+regexes = [
+  # Игнорируем тестовые значения
+  "test_.*",
+  "example_.*",
+  "demo_.*",
+  "fake_.*",
+
+  # Игнорируем публичные ключи/токены (примеры)
+  "sk_test_.*",
+  "pk_test_.*",
+  "AIzaSy[A-Za-z0-9_-]{33}",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\\.",
+]
+
+commits = []
+
+[allowlist.commit]
