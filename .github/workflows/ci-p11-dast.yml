@@ -7,6 +7,7 @@ on:
       - "app/**"
       - "requirements.txt"
       - ".github/workflows/ci-p11-dast.yml"
+      - "zap_baseline.conf"
 
 permissions:
   contents: read
