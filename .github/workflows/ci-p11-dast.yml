@@ -90,20 +90,28 @@ jobs:
           if [ -f EVIDENCE/P11/zap_baseline.json ]; then
             echo "## Scan Results" >> EVIDENCE/P11/dast_summary.md
 
-            # Статистика
-            total=$(jq '.alerts | length' EVIDENCE/P11/zap_baseline.json 2>/dev/null || echo "0")
-            high=$(jq '[.alerts[] | select(.risk=="High")] | length' EVIDENCE/P11/zap_baseline.json 2>/dev/null || echo "0")
-            medium=$(jq '[.alerts[] | select(.risk=="Medium")] | length' EVIDENCE/P11/zap_baseline.json 2>/dev/null || echo "0")
-            low=$(jq '[.alerts[] | select(.risk=="Low")] | length' EVIDENCE/P11/zap_baseline.json 2>/dev/null || echo "0")
+            total=$(jq '.site[0].alerts | length' EVIDENCE/P11/zap_baseline.json 2>/dev/null || echo "0")
+            high=$(jq '[.site[0].alerts[] | select(.riskcode=="3")] | length' EVIDENCE/P11/zap_baseline.json 2>/dev/null || echo "0")
+            medium=$(jq '[.site[0].alerts[] | select(.riskcode=="2")] | length' EVIDENCE/P11/zap_baseline.json 2>/dev/null || echo "0")
+            low=$(jq '[.site[0].alerts[] | select(.riskcode=="1")] | length' EVIDENCE/P11/zap_baseline.json 2>/dev/null || echo "0")
+            info=$(jq '[.site[0].alerts[] | select(.riskcode=="0")] | length' EVIDENCE/P11/zap_baseline.json 2>/dev/null || echo "0")
 
             echo "Total alerts: $total" >> EVIDENCE/P11/dast_summary.md
-            echo "High: $high | Medium: $medium | Low: $low" >> EVIDENCE/P11/dast_summary.md
+            echo "High: $high | Medium: $medium | Low: $low | Informational: $info" >> EVIDENCE/P11/dast_summary.md
 
-            if [ "$high" -gt 0 ] || [ "$medium" -gt 0 ]; then
+            if [ "$total" -gt 0 ]; then
               echo "" >> EVIDENCE/P11/dast_summary.md
               echo "## Alerts for analysis (★★2)" >> EVIDENCE/P11/dast_summary.md
-              jq -r '.alerts[] | select(.risk=="High" or .risk=="Medium") | "**" + .risk + "**: " + .name + " - " + (.description[0:80] + "...")' \
-                EVIDENCE/P11/zap_baseline.json 2>/dev/null | head -2 >> EVIDENCE/P11/dast_summary.md || true
+
+              jq -r '.site[0].alerts[] | select(.riskcode!="0") | "**" + .riskdesc + "**: " + .name + " - " + (.desc | gsub("<[^>]*>"; "")[0:80]) + "..."' \
+                EVIDENCE/P11/zap_baseline.json 2>/dev/null | head -3 >> EVIDENCE/P11/dast_summary.md || true
+
+              # Если нет High/Medium/Low, берем Informational
+              if [ "$high" -eq 0 ] && [ "$medium" -eq 0 ] && [ "$low" -eq 0 ]; then
+                echo "No High/Medium/Low alerts. Top Informational alerts:" >> EVIDENCE/P11/dast_summary.md
+                jq -r '.site[0].alerts[] | select(.riskcode=="0") | "**" + .riskdesc + "**: " + .name' \
+                  EVIDENCE/P11/zap_baseline.json 2>/dev/null | head -2 >> EVIDENCE/P11/dast_summary.md || true
+              fi
             fi
           else
             echo "No scan results available" >> EVIDENCE/P11/dast_summary.md
