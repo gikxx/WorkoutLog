@@ -6,7 +6,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
 
-        # Основные security headers
+        # security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -15,7 +15,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
-        # Content Security Policy (базовая)
+        # Content Security Policy
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self'; "
@@ -23,6 +23,23 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "img-src 'self' data:; "
             "font-src 'self'; "
             "connect-src 'self'"
+        )
+
+        # 1. Insufficient Site Isolation Against Spectre Vulnerability (Low)
+        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+
+        # 2. Storable and Cacheable Content (Informational)
+        response.headers["Cache-Control"] = (
+            "no-cache, no-store, must-revalidate, private"
+        )
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+        response.headers["Permissions-Policy"] = (
+            "accelerometer=(), camera=(), geolocation=(), gyroscope=(), "
+            "magnetometer=(), microphone=(), payment=(), usb=()"
         )
 
         return response
