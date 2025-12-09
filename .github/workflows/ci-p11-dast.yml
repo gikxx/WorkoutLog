@@ -7,7 +7,6 @@ on:
       - "app/**"
       - "requirements.txt"
       - ".github/workflows/ci-p11-dast.yml"
-      - "zap_baseline.conf"
 
 permissions:
   contents: read
@@ -72,8 +71,7 @@ jobs:
               -t http://localhost:8000 \
               -r output/zap_baseline.html \
               -J output/zap_baseline.json \
-              -d \
-              -c zap_baseline.conf || true
+              -d || true
 
       - name: Move results to evidence directory
         run: |
