@@ -85,25 +85,7 @@ jobs:
           output: 'EVIDENCE/P12/trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
 
-      # 5. TRIVY - JSON report
-      - name: Generate Trivy JSON report
-        run: |
-          docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:0.68.1 \
-            image \
-            --format json \
-            --output EVIDENCE/P12/trivy_report.json \
-            --severity HIGH,CRITICAL \
-            workout-app:p12-${{ github.sha }} || true
-
-          if [ -f EVIDENCE/P12/trivy_report.json ]; then
-            echo "Trivy JSON report saved"
-          else
-            echo "Warning: Trivy JSON report not generated"
-          fi
-
-      # 6. Upload to GitHub Security
+      # 5. Upload to GitHub Security
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         with:
