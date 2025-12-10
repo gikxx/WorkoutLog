@@ -109,19 +109,23 @@ jobs:
           echo "" >> EVIDENCE/P12/hardening_summary.md
 
           echo "### Checkov" >> EVIDENCE/P12/hardening_summary.md
+          if [ -f EVIDENCE/P12/checkov_report.json ]; then
+            total_failed=0
+            for failed in $(jq -r '.[].summary.failed // 0' EVIDENCE/P12/checkov_report.json 2>/dev/null); do
+              total_failed=$((total_failed + failed))
+            done
+            echo "Failed checks: $total_failed" >> EVIDENCE/P12/hardening_summary.md
+          else
+            echo "Failed checks: Not generated" >> EVIDENCE/P12/hardening_summary.md
+          fi
+          echo "" >> EVIDENCE/P12/hardening_summary.md
+
+          echo "### Trivy" >> EVIDENCE/P12/hardening_summary.md
           if [ -f EVIDENCE/P12/trivy-results.sarif ]; then
             echo "Report: SARIF generated and uploaded to GitHub Security" >> EVIDENCE/P12/hardening_summary.md
             echo "Scan completed successfully" >> EVIDENCE/P12/hardening_summary.md
           else
             echo "Report: Not generated" >> EVIDENCE/P12/hardening_summary.md
-          fi
-          echo "" >> EVIDENCE/P12/hardening_summary.md
-
-          echo "### Trivy" >> EVIDENCE/P12/hardening_summary.md
-          if [ -f EVIDENCE/P12/trivy_report.sarif ]; then
-            critical=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' EVIDENCE/P12/trivy_report.json 2>/dev/null || echo "0")
-            high=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="HIGH")] | length' EVIDENCE/P12/trivy_report.json 2>/dev/null || echo "0")
-            echo "Critical: $critical, High: $high" >> EVIDENCE/P12/hardening_summary.md
           fi
           echo "" >> EVIDENCE/P12/hardening_summary.md
 
