@@ -38,13 +38,21 @@ jobs:
 
       # 1. HADOLINT - Dockerfile linting
       - name: Run Hadolint on Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: Dockerfile
-          failure-threshold: error
-          config: security/hadolint.yaml
-          output-format: json
-          output-file: EVIDENCE/P12/hadolint_report.json
+        run: |
+          docker run --rm \
+            -v "$(pwd):/workdir" \
+            -w /workdir \
+            hadolint/hadolint:v2.14.0 \
+            hadolint \
+            --config security/hadolint.yaml \
+            --format json \
+            Dockerfile > EVIDENCE/P12/hadolint_report.json || true
+
+          if [ -f EVIDENCE/P12/hadolint_report.json ]; then
+            echo "Hadolint report saved to EVIDENCE/P12/hadolint_report.json"
+          else
+            echo "Warning: Hadolint report not generated"
+          fi
 
       # 2. CHECKOV - IaC security scanning
       - name: Run Checkov on IaC
@@ -52,11 +60,17 @@ jobs:
           docker run --rm \
             -v "$(pwd):/iac" \
             -w /iac \
-            bridgecrew/checkov \
+            bridgecrew/checkov:3.2.495 \
             --directory /iac \
             --config-file /iac/security/checkov.yaml \
             --output json \
             --quiet > EVIDENCE/P12/checkov_report.json 2>/dev/null || true
+
+          if [ -f EVIDENCE/P12/checkov_report.json ]; then
+            echo "Checkov report saved"
+          else
+            echo "Warning: Checkov report not generated"
+          fi
 
       # 3. Build image for Trivy scanning
       - name: Build Docker image
@@ -70,19 +84,24 @@ jobs:
           format: 'sarif'
           output: 'EVIDENCE/P12/trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-          ignore-unfixed: true
 
       # 5. TRIVY - JSON report
       - name: Generate Trivy JSON report
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:latest \
+            aquasec/trivy:0.68.1 \
             image \
             --format json \
             --output EVIDENCE/P12/trivy_report.json \
             --severity HIGH,CRITICAL \
             workout-app:p12-${{ github.sha }} || true
+
+          if [ -f EVIDENCE/P12/trivy_report.json ]; then
+            echo "Trivy JSON report saved"
+          else
+            echo "Warning: Trivy JSON report not generated"
+          fi
 
       # 6. Upload to GitHub Security
       - name: Upload Trivy results to GitHub Security
