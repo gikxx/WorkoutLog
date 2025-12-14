@@ -1,0 +1,145 @@
+name: Security - IaC & Container (P12)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "Dockerfile"
+      - "compose.yaml"
+      - "iac/**"
+      - "security/**"
+      - ".github/workflows/ci-p12-iac-container.yml"
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - "compose.yaml"
+      - "iac/**"
+      - "security/**"
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  iac_container_security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare evidence directories
+        run: mkdir -p EVIDENCE/P12
+
+      # 1. HADOLINT - Dockerfile linting
+      - name: Run Hadolint on Dockerfile
+        run: |
+          docker run --rm \
+            -v "$(pwd):/workdir" \
+            -w /workdir \
+            hadolint/hadolint:v2.14.0 \
+            hadolint \
+            --config security/hadolint.yaml \
+            --format json \
+            Dockerfile > EVIDENCE/P12/hadolint_report.json || true
+
+          if [ -f EVIDENCE/P12/hadolint_report.json ]; then
+            echo "Hadolint report saved to EVIDENCE/P12/hadolint_report.json"
+          else
+            echo "Warning: Hadolint report not generated"
+          fi
+
+      # 2. CHECKOV - IaC security scanning
+      - name: Run Checkov on IaC
+        run: |
+          docker run --rm \
+            -v "$(pwd):/iac" \
+            -w /iac \
+            bridgecrew/checkov:3.2.495 \
+            --directory /iac \
+            --config-file /iac/security/checkov.yaml \
+            --output json \
+            --quiet > EVIDENCE/P12/checkov_report.json 2>/dev/null || true
+
+          if [ -f EVIDENCE/P12/checkov_report.json ]; then
+            echo "Checkov report saved"
+          else
+            echo "Warning: Checkov report not generated"
+          fi
+
+      # 3. Build image for Trivy scanning
+      - name: Build Docker image
+        run: docker build -t workout-app:p12-${{ github.sha }} .
+
+      # 4. TRIVY - Container vulnerability scanning (SARIF)
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'workout-app:p12-${{ github.sha }}'
+          format: 'sarif'
+          output: 'EVIDENCE/P12/trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      # 5. Upload to GitHub Security
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'EVIDENCE/P12/trivy-results.sarif'
+
+      - name: Generate hardening summary
+        run: |
+          echo "# P12 - IaC & Container Security" > EVIDENCE/P12/hardening_summary.md
+          echo "Generated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> EVIDENCE/P12/hardening_summary.md
+          echo "Image: workout-app:p12-${{ github.sha }}" >> EVIDENCE/P12/hardening_summary.md
+          echo "" >> EVIDENCE/P12/hardening_summary.md
+
+          echo "## Scan Results" >> EVIDENCE/P12/hardening_summary.md
+          echo "" >> EVIDENCE/P12/hardening_summary.md
+
+          echo "### Hadolint" >> EVIDENCE/P12/hardening_summary.md
+          if [ -f EVIDENCE/P12/hadolint_report.json ]; then
+            count=$(jq 'length' EVIDENCE/P12/hadolint_report.json 2>/dev/null || echo "0")
+            echo "Findings: $count" >> EVIDENCE/P12/hardening_summary.md
+          fi
+          echo "" >> EVIDENCE/P12/hardening_summary.md
+
+          echo "### Checkov" >> EVIDENCE/P12/hardening_summary.md
+          if [ -f EVIDENCE/P12/checkov_report.json ]; then
+            total_failed=0
+            for failed in $(jq -r '.[].summary.failed // 0' EVIDENCE/P12/checkov_report.json 2>/dev/null); do
+              total_failed=$((total_failed + failed))
+            done
+            echo "Failed checks: $total_failed" >> EVIDENCE/P12/hardening_summary.md
+          else
+            echo "Failed checks: Not generated" >> EVIDENCE/P12/hardening_summary.md
+          fi
+          echo "" >> EVIDENCE/P12/hardening_summary.md
+
+          echo "### Trivy" >> EVIDENCE/P12/hardening_summary.md
+          if [ -f EVIDENCE/P12/trivy-results.sarif ]; then
+            echo "Report: SARIF generated and uploaded to GitHub Security" >> EVIDENCE/P12/hardening_summary.md
+            echo "Scan completed successfully" >> EVIDENCE/P12/hardening_summary.md
+          else
+            echo "Report: Not generated" >> EVIDENCE/P12/hardening_summary.md
+          fi
+          echo "" >> EVIDENCE/P12/hardening_summary.md
+
+          echo "## Hardening Measures" >> EVIDENCE/P12/hardening_summary.md
+          echo "- Fixed Python version" >> EVIDENCE/P12/hardening_summary.md
+          echo "- Non-root user" >> EVIDENCE/P12/hardening_summary.md
+          echo "- Security context in compose.yaml" >> EVIDENCE/P12/hardening_summary.md
+          echo "- Limited capabilities" >> EVIDENCE/P12/hardening_summary.md
+          echo "- SARIF uploaded to GitHub Security" >> EVIDENCE/P12/hardening_summary.md
+
+      - name: Upload evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P12_EVIDENCE
+          path: EVIDENCE/P12/
+          retention-days: 30
